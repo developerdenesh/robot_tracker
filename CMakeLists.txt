@@ -199,12 +199,15 @@ add_library(
 # # Testing ##
 # ############
 
-# # Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_robot_tracker.cpp)
-# if(TARGET ${PROJECT_NAME}-test)
-# target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
-# endif()
+## Add gtest based cpp test target and link libraries
+if(CATKIN_ENABLE_TESTING)
+    catkin_add_gtest(${PROJECT_NAME}-test test/robot_tracker_tests.cpp)
+    # target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME} ${catkin_LIBRARIES})
 
+    # Seems like catkin_LIBRARIES are not required. 
+    # ${PROJECT_NAME} evaluates to robot_tracker which is a library under the add_library() function
+    target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
+ endif()
 
 # # Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
