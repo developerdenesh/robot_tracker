@@ -39,25 +39,19 @@
 #ifndef ROBOT_TRACKER_H_
 #define ROBOT_TRACKER_H_
 
-#include <ros/ros.h>
-#include <ros/package.h>
+#include "rclcpp/rclcpp.hpp"
+#include <ament_index_cpp/get_package_share_directory.hpp>
 
-#include <std_srvs/Trigger.h>
+#include "std_srvs/srv/trigger.hpp"
 
-#include <std_msgs/String.h>
-#include <geometry_msgs/Pose.h>
-#include <geometry_msgs/PolygonStamped.h>
-#include <geometry_msgs/Point32.h>
-#include <geometry_msgs/Point.h>
-#include <geometry_msgs/Pose.h>
-#include <nav_msgs/Path.h>
-#include <visualization_msgs/Marker.h>
+#include "std_msgs/msg/string.hpp"
+#include "geometry_msgs/msg/pose.hpp"
+#include "geometry_msgs/msg/point32.hpp"
+#include "geometry_msgs/msg/polygon_stamped.hpp"
+#include "geometry_msgs/msg/point.hpp"
+#include "nav_msgs/msg/path.hpp"
+#include "visualization_msgs/msg/marker.hpp"
 
-// For conversion from quaternion to euler
-#include "tf/transform_datatypes.h"
-
-// Added dynamic reconfigure
-#include <ddynamic_reconfigure/ddynamic_reconfigure.h>
 
 #include <robot_tracker/json.hpp>
 using json = nlohmann::ordered_json;
@@ -123,7 +117,7 @@ namespace robot_tracker
      *
      * @param data
      */
-    void robotPoseCallback(const geometry_msgs::Pose::ConstPtr &data);
+    void robotPoseCallback(const geometry_msgs::msg::Pose::SharedPtr data) const;
 
     /**
      * @brief Check if robot pose is valid (does not contain nan or inf values)
@@ -132,7 +126,7 @@ namespace robot_tracker
      * @return true
      * @return false
      */
-    bool isRobotPoseValid(const geometry_msgs::Pose &data);
+    bool isRobotPoseValid(const geometry_msgs::msg::Pose &data);
 
     /**
      * @brief use the robot's position to check if it is within the zones
@@ -140,7 +134,7 @@ namespace robot_tracker
      * @return true
      * @return false
      */
-    std::string checkifRobotIsInPolygon(const geometry_msgs::Pose &temp_pose_container);
+    std::string checkifRobotIsInPolygon(const geometry_msgs::msg::Pose &robot_pose);
 
     /**
      * @brief Publish which zone the robot is currently in, if it is not in a zone, publish an empty string like so: ""
@@ -157,11 +151,9 @@ namespace robot_tracker
     bool dummy_variable_{false};
     int publish_throttle_in_seconds_{1};
 
-    ros::Subscriber robot_pose_sub_;
-    ros::Publisher robot_zone_info_pub_;
-    ros::Publisher polygon_text_visualisation_pub_;
-
-    std::unique_ptr<ddynamic_reconfigure::DDynamicReconfigure> ddr;
+    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr robot_pose_sub_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr robot_zone_info_pub_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr polygon_text_visualisation_pub_;
 
     // Take note that the default access-specifier for structs are public
     struct zone_coordinates
@@ -179,8 +171,8 @@ namespace robot_tracker
     std::string robot_pose_topic_{"/robot_pose"};
     std::string json_file_name_{"robot_zones.json"};
 
-    geometry_msgs::Pose robot_pose_;
-    nav_msgs::Path nav_message_;
+    geometry_msgs::msg::Pose robot_pose_;
+    nav_msgs::msg::Path nav_message_;
 
     int dummy_int_;
     double dummy_double_;

@@ -1,61 +1,47 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.5)
 project(robot_tracker)
 
-# Compile as C++11, supported in ROS Noetic
-add_compile_options(-std=c++11)
-
-# Find catkin macros and libraries
-# if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-# is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  rospy
-  std_msgs
-  ddynamic_reconfigure
-
-  # This is used to find package path
-  roslib
-)
-
-# ##################################
-# # catkin specific configuration ##
-# ##################################
-# # The catkin_package macro generates cmake config files for your package
-# # Declare things to be passed to dependent projects
-# # INCLUDE_DIRS: uncomment this if your package contains header files
-# # LIBRARIES: libraries you create in this project that dependent projects also need
-# # CATKIN_DEPENDS: catkin_packages dependent projects also need
-# # DEPENDS: system dependencies of this project that dependent projects also need
-catkin_package(
-  INCLUDE_DIRS
-  include
-  LIBRARIES cars
-  CATKIN_DEPENDS roscpp rospy std_msgs ddynamic_reconfigure
-
-  # DEPENDS system_lib
-)
-
-# # Specify additional locations of header files
-# # Your package locations should be listed before other locations
-include_directories(
-  include
-  ${catkin_INCLUDE_DIRS}
-)
-
-# # Declare a C++ library
-add_library(
-  test-library
-  src/robot_tracker.cpp
-)
-
-# Declare a C++ executable
-# With catkin_make all packages are built within a single CMake context
-# The recommended prefix ensures that target names across packages don't collide
-add_executable(${PROJECT_NAME} src/robot_tracker_node.cpp src/robot_tracker.cpp)
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
-
-# # Add gtest based cpp test target and link libraries
-if(CATKIN_ENABLE_TESTING)
-  catkin_add_gtest(${PROJECT_NAME}-test test/robot_tracker_tests.cpp)
-  target_link_libraries(${PROJECT_NAME}-test test-library ${catkin_LIBRARIES} ${catkin_LIBRARIES})
+# Default to C99
+if(NOT CMAKE_C_STANDARD)
+  set(CMAKE_C_STANDARD 99)
 endif()
+
+# Default to C++14
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+endif()
+
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
+# find dependencies
+find_package(rclcpp REQUIRED)
+find_package(ament_cmake REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+# uncomment the following section in order to fill in
+# further dependencies manually.
+# find_package(<dependency> REQUIRED)
+
+add_executable(robot_tracker src/robot_tracker.cpp src/robot_tracker_node.cpp)
+target_include_directories(robot_tracker PUBLIC
+$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+$<INSTALL_INTERFACE:include>)
+ament_target_dependencies(robot_tracker rclcpp)
+
+install(TARGETS robot_tracker
+  DESTINATION lib/${PROJECT_NAME})
+
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  # the following line skips the linter which checks for copyrights
+  # uncomment the line when a copyright and license is not present in all source files
+  #set(ament_cmake_copyright_FOUND TRUE)
+  # the following line skips cpplint (only works in a git repo)
+  # uncomment the line when this package is not in a git repo
+  #set(ament_cmake_cpplint_FOUND TRUE)
+  ament_lint_auto_find_test_dependencies()
+endif()
+
+ament_package()

@@ -41,8 +41,8 @@ namespace robot_tracker
 {
     RobotTracker::RobotTracker() : dummy_variable_(true)
     {
-        ROS_INFO("%s initialised with: %d", ros::this_node::getName().c_str(), dummy_variable_);
-        last_time_ = ros::Time::now();
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "%s initialised with: %d", rclcpp::Node::get_name().c_str(), dummy_variable_);
+        last_time_ = rclcpp::Clock().now();
         initialisePubSubSrvActions();
         readZoneInformation();
     }
@@ -56,7 +56,7 @@ namespace robot_tracker
     {
         // Create a subscriber to obtain information about the robot's pose
         robot_pose_sub_ = nh_.subscribe(robot_pose_topic_, 1, &RobotTracker::robotPoseCallback, this);
-        robot_zone_info_pub_ = nh_.advertise<std_msgs::String>(ros::this_node::getName() + "/robot_zone_info", 1, true);
+        robot_zone_info_pub_ = this->create_publisher<std_msgs::msg::String>("/robot_zone_info", 10, true);
         polygon_text_visualisation_pub_ = nh_.advertise<visualization_msgs::Marker>(ros::this_node::getName() + "/polygon_text", 1, true);
 
         // Initialise global robot pose to 0
@@ -68,36 +68,20 @@ namespace robot_tracker
         robot_pose_.orientation.z = 0.0;
         robot_pose_.orientation.w = 1.0;
 
-        initialiseParameters();
-        ROS_INFO("The pose subscribed to is: %s", robot_pose_sub_.getTopic().c_str());
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "The pose subscribed to is: %s", robot_pose_sub_.getTopic().c_str());
     }
 
-    void RobotTracker::initialiseParameters()
-    {
-        // Private nodehandler used to access parameters within the node namespace
-        ros::NodeHandle pnh_("~");
-
-        // Parameters
-        pnh_.param<int>("dummy_int", dummy_int_, INT_MAX);
-        pnh_.param<double>("dummy_double", dummy_double_, 0.15);
-
-        // Ddynamic reconfigure
-        ddr.reset(new ddynamic_reconfigure::DDynamicReconfigure(pnh_));
-        ddr->registerVariable<int>("dummy_int", &this->dummy_int_, "Dummy Int", 0, INT_MAX);
-        ddr->registerVariable<double>("dummy_double", &this->dummy_double_, "Dummy Double", 0.0, 1.0);
-        ddr->publishServicesTopics();
-    }
 
     // ======================================================================================================
     // ======================= Zone Tracking Functions ======================================================
     // ======================================================================================================
     bool RobotTracker::readZoneInformation()
     {
-        std::string path = ros::package::getPath("robot_tracker");
+        std::string path = ament_index_cpp::get_package_share_directory("robot_tracker");
         std::ifstream ifs(path + "/" + json_file_name_);
         json coordinate_information_in_json_format = json::parse(ifs);
 
-        ROS_INFO("Received the following json: %s\n", coordinate_information_in_json_format.dump().c_str());
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Received the following json: %s\n", coordinate_information_in_json_format.dump().c_str());
 
         zone_coordinates_.clear();
 
@@ -111,8 +95,8 @@ namespace robot_tracker
             std::string stringyfied_coordinates = std::string(it.value().dump());
 
             // Debug statements
-            ROS_INFO("Zone name: %s", std::string(it.key()).c_str());
-            ROS_INFO("Coordinates: %s\n", stringyfied_coordinates.c_str());
+            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Zone name: %s", std::string(it.key()).c_str());
+            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Coordinates: %s\n", stringyfied_coordinates.c_str());
 
             // Obtain the coordinates in the form of c++ pairs
             std::vector<std::pair<double, double>> coordinates;
@@ -127,9 +111,9 @@ namespace robot_tracker
         return true;
     }
 
-    void RobotTracker::robotPoseCallback(const geometry_msgs::Pose::ConstPtr &data)
+    void robotPoseCallback(const geometry_msgs::msg::Pose::SharedPtr data)
     {
-        geometry_msgs::Pose temp_pose_container;
+        geometry_msgs::msg::Pose temp_pose_container;
         temp_pose_container.position.x = data->position.x;
         temp_pose_container.position.y = (*data).position.y;
         temp_pose_container.position.z = (*data).position.z;
@@ -146,11 +130,11 @@ namespace robot_tracker
         }
         else
         {
-            ROS_ERROR("Robot pose is invalid");
+            RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Robot pose is invalid");
         }
     }
 
-    bool RobotTracker::isRobotPoseValid(const geometry_msgs::Pose &data)
+    bool RobotTracker::isRobotPoseValid(const geometry_msgs::msg::Pose &data)
     {
         if (std::isinf(data.position.x) || std::isnan(data.position.y) || std::isinf(data.position.y) || std::isnan(data.position.y))
         {
@@ -159,7 +143,7 @@ namespace robot_tracker
         return true;
     }
 
-    std::string RobotTracker::checkifRobotIsInPolygon(const geometry_msgs::Pose &robot_pose)
+    std::string RobotTracker::checkifRobotIsInPolygon(const geometry_msgs::msg::Pose &robot_pose)
     {
         std::vector<std::string> zones_robot_is_in;
 
@@ -189,7 +173,7 @@ namespace robot_tracker
                 }
             }
 
-            ROS_INFO("the value of is in is: %d", is_in);
+            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "the value of is in is: %d", is_in);
 
             // Make sure the full round of the convex polygon is checked by checking index 0 again
             if (size > 1)
@@ -220,22 +204,18 @@ namespace robot_tracker
     void RobotTracker::pubRobotZoneInfo(const std::string &result_of_check)
     {
         // Publish the zone message at a throttled speed
-        if (ros::Time::now() - last_time_ > ros::Duration(publish_throttle_in_seconds_))
-        {
-            std_msgs::String result;
-            result.data = result_of_check;
-            robot_zone_info_pub_.publish(result);
-            pubCleaningZoneNameToRviz(result_of_check);
-            last_time_ = ros::Time::now();
-        }
+        std_msgs::msg::String result;
+        result.data = result_of_check;
+        robot_zone_info_pub_->publish(result);
+        pubCleaningZoneNameToRviz(result_of_check);
     }
 
     void RobotTracker::pubCleaningZoneNameToRviz(std::string data)
     {
-        visualization_msgs::Marker vis_message;
-        geometry_msgs::Point point_msg_no_thirty_two;
+        visualization_msgs::msg::Marker vis_message;
+        geometry_msgs::msg::Point point_msg_no_thirty_two;
 
-        geometry_msgs::Pose pose_msg;
+        geometry_msgs::msg::Pose pose_msg;
         pose_msg.position.x = 0.0;
         pose_msg.position.y = 0.0;
         pose_msg.position.z = 0.0;
@@ -257,13 +237,13 @@ namespace robot_tracker
         vis_message.type = 9;
         vis_message.action = 0;
 
-        std_msgs::ColorRGBA color_variable;
+        std_msgs::msg::ColorRGBA color_variable;
         color_variable.a = 1;
         color_variable.b = 1;
         color_variable.g = 1;
         color_variable.r = 1;
 
-        geometry_msgs::Vector3 scale_variable;
+        geometry_msgs::msg::Vector3 scale_variable;
         scale_variable.x = 0.5;
         scale_variable.y = 0.5;
         scale_variable.z = 0.5;
@@ -272,8 +252,8 @@ namespace robot_tracker
         vis_message.color = color_variable;
 
         vis_message.header.frame_id = "base_link";
-        vis_message.header.stamp = ros::Time::now();
-        polygon_text_visualisation_pub_.publish(vis_message);
+        vis_message.header.stamp = rclcpp::Clock().now();
+        polygon_text_visualisation_pub_->publish(vis_message);
     }
 
     // ======================================================================================================
