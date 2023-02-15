@@ -189,13 +189,15 @@ namespace robot_tracker
                 }
             }
 
+            ROS_INFO("the value of is in is: %d", is_in);
+
             // Make sure the full round of the convex polygon is checked by checking index 0 again
             if (size > 1)
             {
-                x1 = fake_polygon_coordinates[0].first;
-                y1 = fake_polygon_coordinates[0].second;
-                x2 = fake_polygon_coordinates[1].first;
-                y2 = fake_polygon_coordinates[1].second;
+                x1 = fake_polygon_coordinates[size - 1].first;
+                y1 = fake_polygon_coordinates[size - 1].second;
+                x2 = fake_polygon_coordinates[0].first;
+                y2 = fake_polygon_coordinates[0].second;
 
                 // Check #1: if the y is between the y of the 2 points
                 // Check #2: then check if the x is less than the x along the line with the same y coordinate
