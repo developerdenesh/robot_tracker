@@ -1,0 +1,6 @@
+<launch>
+    <node pkg="robot_tracker" type="robot_tracker" name="robot_tracker" output="screen">
+		<param name="dummy_int" value="5"/>
+		<param name="dummy_double" value="5.0"/>
+    </node>
+</launch>
