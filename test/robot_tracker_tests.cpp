@@ -1,6 +1,4 @@
 #include <robot_tracker/robot_tracker.h>
-
-// Bring in gtest
 #include <gtest/gtest.h>
 
 class TestSuite : public ::testing::Test
